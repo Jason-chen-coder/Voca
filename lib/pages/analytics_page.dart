@@ -3,7 +3,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import '../models/note.dart';
+import '../services/examples/ai_agent_usage_example.dart';
 import '../utils/mood_scoring.dart';
+import '../services/ai_agent_service.dart';
+import '../services/models/analytics_models.dart';
+import '../services/models/ai_insights.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -19,16 +23,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   List<Map<String, dynamic>> _dailyStats = [];
   List<Map<String, dynamic>> _moodIndexStats = []; // 新增心情指数数据
   bool _isLoading = true;
+  final AIAgentService _aiAgent = AIAgentService();
+  QuickInsightSummary? _quickSummary;
 
   final List<String> _periods = ['本周', '本月', '全部'];
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // 改为2个标签页
+    _tabController = TabController(length: 3, vsync: this); // 增加AI洞察标签页
     _loadAnalyticsData();
+    _loadAIInsights(); // 加载AI洞察
+    _init();
   }
+  Future<void> _init()async{
+    final example = AIAgentUsageExample();
 
+    // 运行各种示例
+    await example.exampleGetMonthlyReport();
+    await example.exampleGetQuickSummary();
+    await example.exampleGetWeeklyGoals();
+    await example.exampleCustomDateRange();
+  }
   @override
   void dispose() {
     _tabController.dispose();
@@ -84,6 +100,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
     return {'start': startDate, 'end': now};
   }
 
+  DateRange _getDateRangeObject() {
+    switch (_selectedPeriod) {
+      case '本周':
+        return DateRange.thisWeek();
+      case '本月':
+        return DateRange.thisMonth();
+      default:
+        return DateRange.all();
+    }
+  }
+
+  Future<void> _loadAIInsights() async {
+    try {
+      final dateRange = _getDateRangeObject();
+      final summary = await _aiAgent.getQuickInsightSummary(dateRange);
+      setState(() => _quickSummary = summary);
+    } catch (e) {
+      print('加载AI洞察失败: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,6 +138,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
           tabs: const [
             Tab(text: '心情分析'), // 合并心情分布和心情指数趋势
             Tab(text: '使用统计'),
+            Tab(text: 'AI洞察'),
           ],
         ),
       ),
@@ -119,6 +157,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                     children: [
                       _buildMoodAnalysis(), // 新的心情分析页面
                       _buildUsageStats(),
+                      _buildAIInsights(),
                     ],
                   ),
           ),
@@ -558,6 +597,50 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
         ],
       ),
     );
+  }
+
+  Widget _buildAIInsights() {
+    if (_quickSummary == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildInsightCard('总体评估', _quickSummary!.activityLevel, Icons.assessment),
+          const SizedBox(height: 12),
+          _buildInsightCard('心情状态', _quickSummary!.moodLevel, Icons.mood),
+          const SizedBox(height: 12),
+          _buildInsightCard('主要心情', _quickSummary!.dominantMood, Icons.favorite),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _showDetailedReport,
+            icon: const Icon(Icons.analytics),
+            label: const Text('查看详细分析报告'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8BC34A),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightCard(String title, String value, IconData icon) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF8BC34A)),
+        title: Text(title),
+        subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Future<void> _showDetailedReport() async {
+    // 显示详细的AI分析报告
+    // 可以导航到新页面或显示对话框
   }
 
   Color _getMoodColor(String mood) {

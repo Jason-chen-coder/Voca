@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:voca/pages/deepseek_settings_page.dart';
 import '../models/note.dart';
 import '../database/database_helper.dart';
 import 'add_note_page.dart';
 import 'analytics_page.dart';  // 添加导入
 import 'package:flutter/foundation.dart';
 import 'debug_page.dart';  // 添加导入
+import '../chat/pages/chat_page.dart';
 
 class UnifiedNotesPage extends StatefulWidget {
   const UnifiedNotesPage({super.key});
@@ -818,6 +820,39 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
               );
             },
             tooltip: '数据统计',
+          ),
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChatPage()),
+              );
+            },
+            tooltip: 'AI助手',
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'deepseek_settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DeepSeekSettingsPage()),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'deepseek_settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.smart_toy),
+                    SizedBox(width: 8),
+                    Text('AI设置'),
+                  ],
+                ),
+              ),
+            ],
+            icon: const Icon(Icons.more_vert),
           ),
           // 仅在调试模式下显示
           if (kDebugMode)

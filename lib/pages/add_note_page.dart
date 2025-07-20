@@ -105,8 +105,7 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
   @override
   void dispose() {
     _contentController.dispose();
-    _contentFocusNode.dispose(); // 释放 FocusNode
-    _contentFocusNode.dispose(); // 释放 FocusNode
+    _contentFocusNode.dispose();
     _saveButtonController.dispose();
     super.dispose();
   }

@@ -1,8 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/note.dart';
-import 'package:intl/intl.dart';
 import '../utils/mood_scoring.dart';
+import '../chat/services/chat_database_service.dart';
+
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
@@ -19,7 +20,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'voca_notes.db');
     return await openDatabase(
       path,
-      version: 3, // 升级版本号
+      version: 5, // 增加版本号
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -35,6 +36,19 @@ class DatabaseHelper {
         mood TEXT
       )
     ''');
+    
+    // 创建配置表
+    await db.execute('''
+      CREATE TABLE config(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE NOT NULL,
+        value TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+    
+    // 创建聊天消息表
+    await ChatDatabaseService.createTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -44,6 +58,21 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       // 移除标签字段（SQLite不支持DROP COLUMN，所以保持现有结构）
       // 新记录不会使用tags字段
+    }
+    if (oldVersion < 4) {
+      // 创建聊天消息表
+      await ChatDatabaseService.createTable(db);
+    }
+    if (oldVersion < 5) {
+      // 创建配置表
+      await db.execute('''
+        CREATE TABLE config(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          key TEXT UNIQUE NOT NULL,
+          value TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        )
+      ''');
     }
   }
 
