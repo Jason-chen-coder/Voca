@@ -16,6 +16,7 @@ class AddNotePage extends StatefulWidget {
 
 class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin {
   final _contentController = TextEditingController();
+  final _contentFocusNode = FocusNode(); // 添加 FocusNode
   String? _selectedMood;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
@@ -78,6 +79,11 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
       _contentController.text = widget.note!.content;
       _selectedMood = widget.note!.mood;
       _selectedDate = widget.note!.createdAt;
+    } else {
+      // 新建记录时自动聚焦到输入框
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _contentFocusNode.requestFocus();
+      });
     }
   }
 
@@ -99,6 +105,8 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
   @override
   void dispose() {
     _contentController.dispose();
+    _contentFocusNode.dispose(); // 释放 FocusNode
+    _contentFocusNode.dispose(); // 释放 FocusNode
     _saveButtonController.dispose();
     super.dispose();
   }
@@ -282,7 +290,7 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.only(top: 16.0,left: 16,right: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -294,7 +302,10 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
                   const SizedBox(height: 20),
                   
                   // 内容输入框
-                  _ContentInput(controller: _contentController),
+                  _ContentInput(
+                    controller: _contentController,
+                    focusNode: _contentFocusNode, // 传递 FocusNode
+                  ),
                   const SizedBox(height: 20),
                   
                   // 心情选择区域
@@ -304,17 +315,16 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
                     onMoodSelect: _selectMood,
                   ),
                   const SizedBox(height: 20),
+                  // 底部保存按钮
+                  _SaveButton(
+                    isLoading: _isLoading,
+                    isEdit: widget.note != null,
+                    animation: _saveButtonScaleAnimation,
+                    onSave: _saveNote,
+                  ),
                 ],
               ),
             ),
-          ),
-          
-          // 底部保存按钮
-          _SaveButton(
-            isLoading: _isLoading,
-            isEdit: widget.note != null,
-            animation: _saveButtonScaleAnimation,
-            onSave: _saveNote,
           ),
         ],
       ),
@@ -375,14 +385,19 @@ class _DateSelector extends StatelessWidget {
 // 内容输入框组件
 class _ContentInput extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
 
-  const _ContentInput({required this.controller});
+  const _ContentInput({
+    required this.controller,
+    required this.focusNode,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: TextField(
         controller: controller,
+        focusNode: focusNode, // 使用传入的 FocusNode
         maxLines: null,
         expands: true,
         textAlignVertical: TextAlignVertical.top,
@@ -506,7 +521,6 @@ class _SaveButton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),

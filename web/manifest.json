@@ -1,6 +1,6 @@
 {
-    "name": "voca_ai",
-    "short_name": "voca_ai",
+    "name": "voca",
+    "short_name": "voca",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

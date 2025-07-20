@@ -1,6 +1,8 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.voca">
+    
     <application
-        android:label="voca_ai"
+        android:label="Voca"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

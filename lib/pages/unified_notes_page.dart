@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import '../models/note.dart';
 import '../database/database_helper.dart';
 import 'add_note_page.dart';
+import 'analytics_page.dart';  // 添加导入
+import 'package:flutter/foundation.dart';
+import 'debug_page.dart';  // 添加导入
 
 class UnifiedNotesPage extends StatefulWidget {
   const UnifiedNotesPage({super.key});
@@ -141,6 +144,9 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
       setState(() {
         _notes = notes;
       });
+
+      // 重新加载记录数量（修复日历显示）
+      await _loadNoteCountsForMonth();
 
       // 启动动画
       _listAnimationController.forward();
@@ -348,6 +354,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                         setModalState(() {
                           tempSelectedDay = focusedDay;
                         });
+                        // 异步更新记录数量
                         _loadNoteCountsForMonth();
                       }
                     },
@@ -684,7 +691,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8BC34A).withOpacity(0.1),
+                          // color: const Color(0xFF8BC34A).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -752,7 +759,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                             ),
                           );
                           if (result == true) {
-                            _loadNotesForSelectedDay();
+                            _loadNotesForSelectedDay(); // 这里会同时更新记录数量
                           }
                         } else if (value == 'delete') {
                           _deleteNote(note);
@@ -793,7 +800,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
 
     if (confirmed == true) {
       await DatabaseHelper().deleteNote(note.id!);
-      _loadNotesForSelectedDay();
+      _loadNotesForSelectedDay(); // 这里会同时更新记录数量
     }
   }
 
@@ -802,10 +809,34 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
     return Scaffold(
       backgroundColor: const Color(0xFFF1F8E9),
       appBar: AppBar(
-        title: const Text('Voca - AI 速记'),
+        title: const Text('Voca'),
         backgroundColor: const Color(0xFF8BC34A),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AnalyticsPage()),
+              );
+            },
+            tooltip: '数据统计',
+          ),
+          // 仅在调试模式下显示
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.bug_report),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DebugPage()),
+                );
+              },
+              tooltip: '调试工具',
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -815,7 +846,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
           _buildNotesList(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () async {
           HapticFeedback.mediumImpact();
           final result = await Navigator.push(
@@ -823,13 +854,12 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
             MaterialPageRoute(builder: (context) => const AddNotePage()),
           );
           if (result == true) {
-            _loadNotesForSelectedDay();
+            _loadNotesForSelectedDay(); // 这里会同时更新记录数量
           }
         },
         backgroundColor: const Color(0xFF8BC34A),
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('新建记录'),
+        child: const Icon(Icons.add),
       ),
     );
   }

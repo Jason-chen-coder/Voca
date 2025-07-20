@@ -170,4 +170,49 @@ class DatabaseHelper {
     
     return result;
   }
+
+  // 获取心情统计数据
+  Future<Map<String, int>> getMoodStatistics(Map<String, DateTime> dateRange) async {
+    final db = await database;
+    
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT mood, COUNT(*) as count
+      FROM notes 
+      WHERE mood IS NOT NULL 
+        AND created_at >= ? 
+        AND created_at <= ?
+      GROUP BY mood
+      ORDER BY count DESC
+    ''', [
+      dateRange['start']!.millisecondsSinceEpoch,
+      dateRange['end']!.millisecondsSinceEpoch,
+    ]);
+    
+    final Map<String, int> result = {};
+    for (final map in maps) {
+      result[map['mood'] as String] = map['count'] as int;
+    }
+    
+    return result;
+  }
+
+  // 获取每日统计数据
+  Future<List<Map<String, dynamic>>> getDailyStatistics(Map<String, DateTime> dateRange) async {
+    final db = await database;
+    
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT 
+        DATE(created_at / 1000, 'unixepoch') as date,
+        COUNT(*) as count
+      FROM notes 
+      WHERE created_at >= ? AND created_at <= ?
+      GROUP BY DATE(created_at / 1000, 'unixepoch')
+      ORDER BY date ASC
+    ''', [
+      dateRange['start']!.millisecondsSinceEpoch,
+      dateRange['end']!.millisecondsSinceEpoch,
+    ]);
+    
+    return maps;
+  }
 }
