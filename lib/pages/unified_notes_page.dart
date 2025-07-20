@@ -482,11 +482,6 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _rangeStart != null && _rangeEnd != null ? '筛选心情 (日期范围)' : '筛选心情',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(

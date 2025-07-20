@@ -2,7 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/note.dart';
 import 'package:intl/intl.dart';
-
+import '../utils/mood_scoring.dart';
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
@@ -214,5 +214,52 @@ class DatabaseHelper {
     ]);
     
     return maps;
+  }
+
+  // 获取每日心情指数统计
+  Future<List<Map<String, dynamic>>> getDailyMoodIndex(Map<String, DateTime> dateRange) async {
+    final db = await database;
+    
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT 
+        DATE(created_at / 1000, 'unixepoch') as date,
+        mood
+      FROM notes 
+      WHERE mood IS NOT NULL 
+        AND created_at >= ? 
+        AND created_at <= ?
+      ORDER BY date ASC
+    ''', [
+      dateRange['start']!.millisecondsSinceEpoch,
+      dateRange['end']!.millisecondsSinceEpoch,
+    ]);
+    
+    // 按日期分组并计算每日平均心情指数
+    final Map<String, List<int>> dailyMoodScores = {};
+    
+    for (final map in maps) {
+      final date = map['date'] as String;
+      final mood = map['mood'] as String;
+      final score = MoodScoring.getMoodScore(mood);
+      
+      if (!dailyMoodScores.containsKey(date)) {
+        dailyMoodScores[date] = [];
+      }
+      dailyMoodScores[date]!.add(score);
+    }
+    
+    // 计算每日平均分并转换为结果格式
+    final List<Map<String, dynamic>> result = [];
+    
+    for (final entry in dailyMoodScores.entries) {
+      final averageScore = MoodScoring.calculateAverageScore(entry.value);
+      result.add({
+        'date': entry.key,
+        'mood_index': averageScore,
+        'record_count': entry.value.length,
+      });
+    }
+    
+    return result;
   }
 }

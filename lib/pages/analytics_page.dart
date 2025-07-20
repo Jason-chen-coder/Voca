@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import '../models/note.dart';
+import '../utils/mood_scoring.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -16,6 +17,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   String _selectedPeriod = '本月';
   Map<String, int> _moodStats = {};
   List<Map<String, dynamic>> _dailyStats = [];
+  List<Map<String, dynamic>> _moodIndexStats = []; // 新增心情指数数据
   bool _isLoading = true;
 
   final List<String> _periods = ['本周', '本月', '全部'];
@@ -23,7 +25,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this); // 改为2个标签页
     _loadAnalyticsData();
   }
 
@@ -40,6 +42,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
       await Future.wait([
         _loadMoodStats(),
         _loadDailyStats(),
+        _loadMoodIndexStats(), // 新增心情指数数据加载
       ]);
     } catch (e) {
       print('加载统计数据失败: $e');
@@ -56,6 +59,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   Future<void> _loadDailyStats() async {
     final stats = await DatabaseHelper().getDailyStatistics(_getDateRange());
     setState(() => _dailyStats = stats);
+  }
+
+  Future<void> _loadMoodIndexStats() async {
+    final stats = await DatabaseHelper().getDailyMoodIndex(_getDateRange());
+    setState(() => _moodIndexStats = stats);
   }
 
   Map<String, DateTime> _getDateRange() {
@@ -91,8 +99,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(text: '记录趋势'),
-            Tab(text: '心情分布'),
+            Tab(text: '心情分析'), // 合并心情分布和心情指数趋势
             Tab(text: '使用统计'),
           ],
         ),
@@ -110,8 +117,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                 : TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildTrendChart(),
-                      _buildMoodChart(),
+                      _buildMoodAnalysis(), // 新的心情分析页面
                       _buildUsageStats(),
                     ],
                   ),
@@ -161,9 +167,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
     );
   }
 
-  Widget _buildTrendChart() {
+  Widget _buildRecordCountChart() {
     if (_dailyStats.isEmpty) {
-      return const Center(child: Text('暂无数据'));
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('记录数量趋势', 
+                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Expanded(
+                child: Center(child: Text('暂无数据')),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     // 直接在这里计算间隔
@@ -180,64 +201,91 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Card(
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('记录数量趋势 (${_dailyStats.length}天)', 
+                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: true, drawVerticalLine: false),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 25,
+                        interval: getInterval(),
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index >= 0 && index < _dailyStats.length) {
+                            final date = DateTime.parse(_dailyStats[index]['date']);
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                DateFormat('MM/dd').format(date),
+                                style: const TextStyle(fontSize: 9),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: _dailyStats.asMap().entries.map((entry) {
+                        return FlSpot(entry.key.toDouble(), entry.value['count'].toDouble());
+                      }).toList(),
+                      isCurved: true,
+                      color: const Color(0xFF8BC34A),
+                      barWidth: 2,
+                      dotData: const FlDotData(show: true),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFF8BC34A).withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoodIndexChart() {
+    if (_moodIndexStats.isEmpty) {
+      return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('记录数量趋势 (${_dailyStats.length}天)', 
-                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              Expanded(
-                child: LineChart(
-                  LineChartData(
-                    gridData: FlGridData(show: true, drawVerticalLine: false),
-                    titlesData: FlTitlesData(
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 30,
-                          interval: getInterval(),
-                          getTitlesWidget: (value, meta) {
-                            final index = value.toInt();
-                            if (index >= 0 && index < _dailyStats.length) {
-                              final date = DateTime.parse(_dailyStats[index]['date']);
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  DateFormat('MM/dd').format(date),
-                                  style: const TextStyle(fontSize: 10),
-                                ),
-                              );
-                            }
-                            return const Text('');
-                          },
-                        ),
-                      ),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: _dailyStats.asMap().entries.map((entry) {
-                          return FlSpot(entry.key.toDouble(), entry.value['count'].toDouble());
-                        }).toList(),
-                        isCurved: true,
-                        color: const Color(0xFF8BC34A),
-                        barWidth: 3,
-                        dotData: FlDotData(show: true),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: const Color(0xFF8BC34A).withOpacity(0.2),
-                        ),
-                      ),
+              const Text('心情指数趋势', 
+                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.trending_up, size: 48, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('暂无心情数据', style: TextStyle(fontSize: 14, color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -245,87 +293,188 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
             ],
           ),
         ),
+      );
+    }
+
+    // 计算间隔
+    double getInterval() {
+      final dataCount = _moodIndexStats.length;
+      if (dataCount <= 7) {
+        return 1;
+      } else if (dataCount <= 14) {
+        return 2;
+      } else if (dataCount <= 30) {
+        return 3;
+      } else {
+        return (dataCount / 8).ceil().toDouble();
+      }
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('心情指数趋势 (${_moodIndexStats.length}天)', 
+                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: true, drawVerticalLine: false),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true, 
+                        reservedSize: 35,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 25,
+                        interval: getInterval(),
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index >= 0 && index < _moodIndexStats.length) {
+                            final date = DateTime.parse(_moodIndexStats[index]['date']);
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                DateFormat('MM/dd').format(date),
+                                style: const TextStyle(fontSize: 9),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minY: 1,
+                  maxY: 10,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: _moodIndexStats.asMap().entries.map((entry) {
+                        return FlSpot(entry.key.toDouble(), entry.value['mood_index'].toDouble());
+                      }).toList(),
+                      isCurved: true,
+                      color: const Color(0xFFFF9800),
+                      barWidth: 2,
+                      dotData: const FlDotData(show: true),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFFFF9800).withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMoodChart() {
     if (_moodStats.isEmpty) {
-      return const Center(child: Text('暂无心情数据'));
-    }
-
-    final total = _moodStats.values.reduce((a, b) => a + b);
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Card(
+      return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('心情分布', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: PieChart(
-                        PieChartData(
-                          sections: _moodStats.entries.map((entry) {
-                            final percentage = (entry.value / total * 100);
-                            return PieChartSectionData(
-                              value: entry.value.toDouble(),
-                              title: '${percentage.toStringAsFixed(1)}%',
-                              color: _getMoodColor(entry.key),
-                              radius: 80,
-                              titleStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            );
-                          }).toList(),
-                          centerSpaceRadius: 40,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: _moodStats.entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: _getMoodColor(entry.key),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '${entry.key.substring(2)} (${entry.value})',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
+              const Text('心情分布', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Expanded(
+                child: Center(child: Text('暂无心情数据')),
               ),
             ],
           ),
+        ),
+      );
+    }
+
+    final total = _moodStats.values.reduce((a, b) => a + b);
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('心情分布', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: PieChart(
+                      PieChartData(
+                        sections: _moodStats.entries.map((entry) {
+                          final percentage = (entry.value / total * 100);
+                          return PieChartSectionData(
+                            value: entry.value.toDouble(),
+                            title: '${percentage.toStringAsFixed(1)}%',
+                            color: _getMoodColor(entry.key),
+                            radius: 60, // 稍微缩小半径
+                            titleStyle: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          );
+                        }).toList(),
+                        centerSpaceRadius: 30, // 缩小中心空间
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _moodStats.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: _getMoodColor(entry.key),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '${entry.key.substring(2)} (${entry.value})',
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -339,11 +488,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildStatCard('总记录数', totalNotes.toString(), Icons.note_alt),
-          const SizedBox(height: 12),
-          _buildStatCard('日均记录', avgDaily, Icons.trending_up),
+          // 统计卡片
+          Row(
+            children: [
+              Expanded(child: _buildStatCard('总记录数', totalNotes.toString(), Icons.note_alt)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('日均记录', avgDaily, Icons.trending_up)),
+            ],
+          ),
           const SizedBox(height: 12),
           _buildStatCard('心情种类', _moodStats.length.toString(), Icons.mood),
+          const SizedBox(height: 16),
+          // 记录数量趋势图
+          Expanded(
+            child: _buildRecordCountChart(),
+          ),
         ],
       ),
     );
@@ -376,6 +535,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMoodAnalysis() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // 心情分布饼图
+          Expanded(
+            flex: 1,
+            child: _buildMoodChart(),
+          ),
+          const SizedBox(height: 16),
+          // 心情指数趋势图
+          Expanded(
+            flex: 1,
+            child: _buildMoodIndexChart(),
+          ),
+        ],
       ),
     );
   }
