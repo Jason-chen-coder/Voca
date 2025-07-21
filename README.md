@@ -1,11 +1,8 @@
-# 📱 AI 速记 App 产品文档
+# 📱Voca
 
 ---
 
 ## 🧭 产品定位
-
-**名称：**
-> Voca
 
 **english slogan：** 
 > Think less. Remember more
