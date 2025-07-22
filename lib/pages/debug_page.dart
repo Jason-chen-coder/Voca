@@ -104,10 +104,10 @@ class _DebugPageState extends State<DebugPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: const Color(0xFFE8F8F2),
       appBar: AppBar(
         title: const Text('调试工具'),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -155,7 +155,7 @@ class _DebugPageState extends State<DebugPage> {
                 : const Icon(Icons.add_circle),
               label: Text(_isLoading ? '生成中...' : '生成模拟数据'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8BC34A),
+                backgroundColor: const Color(0xFF31DA9F),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),

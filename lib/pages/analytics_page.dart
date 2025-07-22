@@ -124,10 +124,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: const Color(0xFFE8F8F2),
       appBar: AppBar(
         title: const Text('数据统计'),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(
@@ -149,7 +149,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8BC34A)),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31DA9F)),
                     ),
                   )
                 : TabBarView(
@@ -190,7 +190,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                           _loadAnalyticsData();
                         }
                       },
-                      selectedColor: const Color(0xFF8BC34A),
+                      selectedColor: const Color(0xFF31DA9F),
                       checkmarkColor: Colors.white,
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
@@ -288,12 +288,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                         return FlSpot(entry.key.toDouble(), entry.value['count'].toDouble());
                       }).toList(),
                       isCurved: true,
-                      color: const Color(0xFF8BC34A),
+                      color: const Color(0xFF31DA9F),
                       barWidth: 2,
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFF8BC34A).withOpacity(0.2),
+                        color: const Color(0xFF31DA9F).withOpacity(0.2),
                       ),
                     ),
                   ],
@@ -408,12 +408,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                         return FlSpot(entry.key.toDouble(), entry.value['mood_index'].toDouble());
                       }).toList(),
                       isCurved: true,
-                      color: const Color(0xFFFF9800),
+                      color: const Color(0xFF31DA9F),
                       barWidth: 2,
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFFFF9800).withOpacity(0.2),
+                        color: const Color(0xFF31DA9F).withOpacity(0.2),
                       ),
                     ),
                   ],
@@ -556,10 +556,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF8BC34A).withOpacity(0.1),
+                color: const Color(0xFF31DA9F).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: const Color(0xFF8BC34A), size: 24),
+              child: Icon(icon, color: const Color(0xFF31DA9F), size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -619,7 +619,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
             icon: const Icon(Icons.analytics),
             label: const Text('查看详细分析报告'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8BC34A),
+              backgroundColor: const Color(0xFF31DA9F),
               foregroundColor: Colors.white,
             ),
           ),
@@ -631,7 +631,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   Widget _buildInsightCard(String title, String value, IconData icon) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF8BC34A)),
+        leading: Icon(icon, color: const Color(0xFF31DA9F)),
         title: Text(title),
         subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
@@ -645,14 +645,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
 
   Color _getMoodColor(String mood) {
     final colors = [
-      const Color(0xFF8BC34A), // 绿色
-      const Color(0xFF4CAF50), // 深绿
-      const Color(0xFFFFC107), // 黄色
-      const Color(0xFFFF9800), // 橙色
-      const Color(0xFFF44336), // 红色
-      const Color(0xFF9C27B0), // 紫色
-      const Color(0xFF2196F3), // 蓝色
-      const Color(0xFF607D8B), // 蓝灰
+      const Color(0xFF31DA9F), // 主青绿色
+      const Color(0xFF28B085), // 深青绿
+      const Color(0xFF7AE6B8), // 浅青绿
+      const Color(0xFF52E5A3), // 中青绿
+      const Color(0xFF1ABC9C), // 蓝绿
+      const Color(0xFF16A085), // 深蓝绿
+      const Color(0xFF48C9B0), // 浅蓝绿
+      const Color(0xFF58D68D), // 绿色
     ];
     return colors[mood.hashCode % colors.length];
   }

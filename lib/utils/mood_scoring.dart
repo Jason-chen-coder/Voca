@@ -33,12 +33,12 @@ class MoodScoring {
 
   /// 获取心情等级对应的颜色
   static String getMoodLevelColor(double score) {
-    if (score >= 8.5) return '#4CAF50'; // 深绿
-    if (score >= 7.0) return '#8BC34A'; // 浅绿
-    if (score >= 5.5) return '#FFC107'; // 黄色
-    if (score >= 4.0) return '#FF9800'; // 橙色
-    if (score >= 2.5) return '#FF5722'; // 深橙
-    return '#F44336'; // 红色
+    if (score >= 8.5) return '#28B085'; // 深青绿
+    if (score >= 7.0) return '#31DA9F'; // 主青绿
+    if (score >= 5.5) return '#52E5A3'; // 中青绿
+    if (score >= 4.0) return '#7AE6B8'; // 浅青绿
+    if (score >= 2.5) return '#48C9B0'; // 蓝绿
+    return '#1ABC9C'; // 深蓝绿
   }
 
   /// 计算心情指数列表的平均值

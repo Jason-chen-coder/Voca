@@ -15,8 +15,8 @@ class MyApp extends StatelessWidget {
       title: 'Voca - AI 速记',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8BC34A),
-          background: const Color(0xFFF1F8E9),
+          seedColor: const Color(0xFF31DA9F),
+          background: const Color(0xFFE8F8F2),
         ),
         useMaterial3: true,
       ),

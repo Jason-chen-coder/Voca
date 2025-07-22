@@ -280,7 +280,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                                   });
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF8BC34A),
+                                  backgroundColor: const Color(0xFF31DA9F),
                                   foregroundColor: Colors.white,
                                 ),
                                 child: const Text('确定'),
@@ -294,7 +294,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8BC34A).withOpacity(0.1),
+                          color: const Color(0xFF31DA9F).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -302,7 +302,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                             Icon(
                               Icons.info_outline,
                               size: 16,
-                              color: const Color(0xFF8BC34A),
+                              color: const Color(0xFF31DA9F),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -310,7 +310,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                                 _getSelectionHint(tempRangeStart, tempRangeEnd, tempSelectedDay),
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: const Color(0xFF8BC34A),
+                                  color: const Color(0xFF31DA9F),
                                 ),
                               ),
                             ),
@@ -401,8 +401,8 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                     headerStyle: const HeaderStyle(
                       formatButtonVisible: false,
                       titleCentered: true,
-                      leftChevronIcon: Icon(Icons.chevron_left, color: Color(0xFF8BC34A)),
-                      rightChevronIcon: Icon(Icons.chevron_right, color: Color(0xFF8BC34A)),
+                      leftChevronIcon: Icon(Icons.chevron_left, color: Color(0xFF31DA9F)),
+                      rightChevronIcon: Icon(Icons.chevron_right, color: Color(0xFF31DA9F)),
                     ),
                   ),
                 ),
@@ -441,7 +441,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
               children: [
                 Icon(
                   Icons.calendar_today,
-                  color: const Color(0xFF8BC34A),
+                  color: const Color(0xFF31DA9F),
                   size: 20,
                 ),
                 const SizedBox(width: 12),
@@ -522,14 +522,14 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
               curve: Curves.easeInOut,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF8BC34A) : Colors.white,
+                color: isSelected ? const Color(0xFF31DA9F) : Colors.white,
                 borderRadius: BorderRadius.circular(25),
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF8BC34A) : Colors.grey.shade300,
+                  color: isSelected ? const Color(0xFF31DA9F) : Colors.grey.shade300,
                 ),
                 boxShadow: isSelected ? [
                   BoxShadow(
-                    color: const Color(0xFF8BC34A).withOpacity(0.3),
+                    color: const Color(0xFF31DA9F).withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -564,7 +564,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
       return const Expanded(
         child: Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8BC34A)),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31DA9F)),
           ),
         ),
       );
@@ -688,7 +688,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          // color: const Color(0xFF8BC34A).withOpacity(0.1),
+                          // color: const Color(0xFF31DA9F).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -804,10 +804,10 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: const Color(0xFFE8F8F2),
       appBar: AppBar(
         title: const Text('Voca'),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -887,7 +887,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
             _loadNotesForSelectedDay(); // 这里会同时更新记录数量
           }
         },
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
@@ -900,13 +900,13 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
     Color textColor;
     
     if (isSelected || isRangeEnd) {
-      backgroundColor = const Color(0xFF8BC34A);
+      backgroundColor = const Color(0xFF31DA9F);
       textColor = Colors.white;
     } else if (isToday) {
-      backgroundColor = const Color(0xFFA5D6A7);
+      backgroundColor = const Color(0xFF7AE6B8);
       textColor = Colors.white;
     } else if (isInRange) {
-      backgroundColor = const Color(0xFFE8F5E8);
+      backgroundColor = const Color(0xFFE8F8F2);
       textColor = Colors.black87;
     } else {
       backgroundColor = Colors.transparent;
@@ -942,7 +942,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                 decoration: BoxDecoration(
                   color: isSelected || isToday || isRangeEnd
                       ? Colors.white
-                      : const Color(0xFF8BC34A),
+                      : const Color(0xFF31DA9F),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -961,7 +961,7 @@ class _UnifiedNotesPageState extends State<UnifiedNotesPage>
                     count > 99 ? '99+' : count.toString(),
                     style: TextStyle(
                       color: isSelected || isToday || isRangeEnd
-                          ? const Color(0xFF8BC34A)
+                          ? const Color(0xFF31DA9F)
                           : Colors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

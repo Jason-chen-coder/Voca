@@ -78,7 +78,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           (context) => AlertDialog(
             title: const Row(
               children: [
-                Icon(Icons.settings, color: Color(0xFF8BC34A)),
+                Icon(Icons.settings, color: Color(0xFF31DA9F)),
                 SizedBox(width: 8),
                 Text('配置AI功能'),
               ],
@@ -98,7 +98,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                   _navigateToSettings();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8BC34A),
+                  backgroundColor: const Color(0xFF31DA9F),
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('立即配置'),
@@ -286,10 +286,10 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: const Color(0xFFE8F8F2),
       appBar: AppBar(
         title: const Text('AI 智能助手'),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -363,7 +363,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               const Icon(
                 Icons.auto_awesome,
                 size: 20,
-                color: Color(0xFF8BC34A),
+                color: Color(0xFF31DA9F),
               ),
               const SizedBox(width: 8),
               const Text(
@@ -392,7 +392,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8BC34A)),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31DA9F)),
         ),
       );
     }
@@ -420,7 +420,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           if (!message.isUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: const Color(0xFF8BC34A),
+              backgroundColor: const Color(0xFF31DA9F),
               child: const Icon(Icons.smart_toy, size: 16, color: Colors.white),
             ),
             const SizedBox(width: 8),
@@ -429,7 +429,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: message.isUser ? const Color(0xFF8BC34A) : Colors.white,
+                color: message.isUser ? const Color(0xFF31DA9F) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -455,7 +455,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.grey[600]!,
+                              const Color(0xFF31DA9F),
                             ),
                           ),
                         ),
@@ -511,7 +511,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                     )
                   else
                     Text(
-                      message.content,
+                      message.content.trim(),
                       style: TextStyle(
                         color: message.isUser ? Colors.white : Colors.black87,
                         fontSize: 16,
@@ -549,7 +549,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: const Color(0xFF8BC34A),
+            backgroundColor: const Color(0xFF31DA9F),
             child: const Icon(Icons.smart_toy, size: 16, color: Colors.white),
           ),
           const SizedBox(width: 8),
@@ -584,7 +584,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: Color.lerp(Colors.grey[400], const Color(0xFF8BC34A), value),
+            color: Color.lerp(Colors.grey[400], const Color(0xFF31DA9F), value),
             shape: BoxShape.circle,
           ),
         );
@@ -637,7 +637,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                       _isAIResponding
                           ? Colors.grey[400]
                           : (_showQuickQuestions
-                              ? const Color(0xFF8BC34A)
+                              ? const Color(0xFF31DA9F)
                               : Colors.grey[600]),
                   tooltip: '快速问题',
                 ),
@@ -659,7 +659,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                       fillColor:
                           _isAIResponding
                               ? Colors.grey[100]
-                              : const Color(0xFFF1F8E9),
+                              : const Color(0xFFE8F8F2),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 12,
@@ -703,7 +703,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                   backgroundColor:
                       (_messageController.text.trim().isNotEmpty &&
                               !_isAIResponding)
-                          ? const Color(0xFF8BC34A)
+                          ? const Color(0xFF31DA9F)
                           : Colors.grey[300],
                   mini: true,
                   child:
@@ -714,7 +714,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.grey[600]!,
+                                const Color(0xFF31DA9F),
                               ),
                             ),
                           )
@@ -750,7 +750,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               const Icon(
                 Icons.auto_awesome,
                 size: 16,
-                color: Color(0xFF8BC34A),
+                color: Color(0xFF31DA9F),
               ),
               const SizedBox(width: 8),
               const Text(
@@ -766,7 +766,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 onPressed: _toggleQuickQuestions,
                 child: const Text(
                   '收起',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF8BC34A)),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF31DA9F)),
                 ),
               ),
             ],
@@ -805,10 +805,10 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F8E9),
+            color: const Color(0xFFE8F8F2),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFF8BC34A).withOpacity(0.3),
+              color: const Color(0xFF31DA9F).withOpacity(0.3),
               width: 1,
             ),
           ),
@@ -818,7 +818,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               Icon(
                 _getQuestionIcon(question),
                 size: 16,
-                color: const Color(0xFF2E7D32),
+                color: const Color(0xFF31DA9F),
               ),
               const SizedBox(width: 8),
               Flexible(
@@ -826,7 +826,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                   question,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF2E7D32),
+                    color: Color(0xFF31DA9F),
                     fontWeight: FontWeight.w500,
                   ),
                 ),

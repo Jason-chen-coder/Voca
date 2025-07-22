@@ -120,10 +120,10 @@ class _DeepSeekSettingsPageState extends State<DeepSeekSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: const Color(0xFFE8F8F2),
       appBar: AppBar(
         title: const Text('DeepSeek API 设置'),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -214,7 +214,7 @@ class _DeepSeekSettingsPageState extends State<DeepSeekSettingsPage> {
                   child: ElevatedButton(
                     onPressed: _isValidating ? null : _saveApiKey,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8BC34A),
+                      backgroundColor: const Color(0xFF31DA9F),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),

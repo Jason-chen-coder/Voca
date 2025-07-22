@@ -129,7 +129,7 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF8BC34A),
+              primary: Color(0xFF31DA9F),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
@@ -264,7 +264,7 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         duration: const Duration(milliseconds: 2500),
         behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
@@ -278,10 +278,10 @@ class _AddNotePageState extends State<AddNotePage> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: const Color(0xFFE8F8F2),
       appBar: AppBar(
         title: Text(widget.note == null ? '新建记录' : '编辑记录'),
-        backgroundColor: const Color(0xFF8BC34A),
+        backgroundColor: const Color(0xFF31DA9F),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -356,7 +356,7 @@ class _DateSelector extends StatelessWidget {
             children: [
               Icon(
                 Icons.calendar_today,
-                color: const Color(0xFF8BC34A),
+                color: const Color(0xFF31DA9F),
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -416,7 +416,7 @@ class _ContentInput extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide(color: Color(0xFF8BC34A), width: 2),
+            borderSide: BorderSide(color: Color(0xFF31DA9F), width: 2),
           ),
           filled: true,
           fillColor: Colors.white,
@@ -461,14 +461,14 @@ class _MoodSelector extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF8BC34A) : Colors.white,
+                  color: isSelected ? const Color(0xFF31DA9F) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF8BC34A) : Colors.grey.shade300,
+                    color: isSelected ? const Color(0xFF31DA9F) : Colors.grey.shade300,
                   ),
                   boxShadow: isSelected ? [
                     BoxShadow(
-                      color: const Color(0xFF8BC34A).withOpacity(0.3),
+                      color: const Color(0xFF31DA9F).withOpacity(0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -540,11 +540,11 @@ class _SaveButton extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : onSave,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8BC34A),
+                    backgroundColor: const Color(0xFF31DA9F),
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade300,
                     elevation: isLoading ? 0 : 4,
-                    shadowColor: const Color(0xFF8BC34A).withOpacity(0.3),
+                    shadowColor: const Color(0xFF31DA9F).withOpacity(0.3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
