@@ -279,6 +279,7 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
     }
   }
 
+  // 修改_processWithDioStream为async*生成器
   Stream<String> _processWithDioStream(
     List<Map<String, dynamic>> messages,
   ) async* {
@@ -309,108 +310,84 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
         ),
       );
 
-      final controller = StreamController<String>();
       String accumulated = '';
       Map<int, Map<String, String>> pendingToolCalls = {};
       bool hasToolCalls = false;
 
-      _lastStreamSub = (response.data as ResponseBody).stream
+      await for (final line in (response.data as ResponseBody).stream
           .map((bytes) => utf8.decode(bytes))
-          .transform(const LineSplitter())
-          .listen(
-            (line) async {
-              if (line.isEmpty || !line.startsWith('data: ')) return;
+          .transform(const LineSplitter())) {
+        if (line.isEmpty || !line.startsWith('data: ')) continue;
+        final data = line.substring(6);
+        if (data == '[DONE]') {
+          if (hasToolCalls && pendingToolCalls.isNotEmpty) {
+            yield* await _handleToolCallsAndContinue(
+              messages,
+              pendingToolCalls,
+              accumulated,
+            );
+            return;
+          }
+          return;
+        }
+        try {
+          final json = jsonDecode(data);
+          final choices = json['choices'] as List?;
+          if (choices == null || choices.isEmpty) continue;
 
-              final data = line.substring(6);
-              if (data == '[DONE]') {
-                if (hasToolCalls && pendingToolCalls.isNotEmpty) {
-                  await _handleToolCallsAndContinue(
-                    messages,
-                    pendingToolCalls,
-                    controller,
-                    accumulated,
-                  );
-                } else {
-                  controller.close();
-                }
-                return;
+          final choice = choices.first;
+          final delta = choice['delta'];
+
+          // 处理工具调用
+          if (delta['tool_calls'] != null) {
+            hasToolCalls = true;
+            final toolCalls = delta['tool_calls'] as List;
+            for (final toolCall in toolCalls) {
+              final index = toolCall['index'] as int;
+              if (!pendingToolCalls.containsKey(index)) {
+                pendingToolCalls[index] = {
+                  'id': '',
+                  'name': '',
+                  'arguments': '',
+                };
               }
 
-              try {
-                final json = jsonDecode(data);
-                final choices = json['choices'] as List?;
-                if (choices == null || choices.isEmpty) return;
+              final existing = pendingToolCalls[index]!;
+              pendingToolCalls[index] = {
+                'id': toolCall['id'] ?? existing['id']!,
+                'name': toolCall['function']?['name'] ?? existing['name']!,
+                'arguments':
+                    existing['arguments']! +
+                    (toolCall['function']?['arguments'] ?? ''),
+              };
+            }
+          }
 
-                final choice = choices.first;
-                final delta = choice['delta'];
-
-                // 处理工具调用
-                if (delta['tool_calls'] != null) {
-                  hasToolCalls = true;
-                  final toolCalls = delta['tool_calls'] as List;
-                  for (final toolCall in toolCalls) {
-                    final index = toolCall['index'] as int;
-                    if (!pendingToolCalls.containsKey(index)) {
-                      pendingToolCalls[index] = {
-                        'id': '',
-                        'name': '',
-                        'arguments': '',
-                      };
-                    }
-
-                    final existing = pendingToolCalls[index]!;
-                    pendingToolCalls[index] = {
-                      'id': toolCall['id'] ?? existing['id']!,
-                      'name':
-                          toolCall['function']?['name'] ?? existing['name']!,
-                      'arguments':
-                          existing['arguments']! +
-                          (toolCall['function']?['arguments'] ?? ''),
-                    };
-                  }
-                }
-
-                // 处理文本内容
-                if (delta['content'] != null) {
-                  final content = _sanitizeText(delta['content'] as String);
-                  if (content.isNotEmpty) {
-                    accumulated += content;
-                    if (!controller.isClosed) {
-                      controller.add(accumulated);
-                    }
-                  }
-                }
-              } catch (e) {
-                print('解析SSE数据失败: $e');
-              }
-            },
-            onError: (e) {
-              print('❌ Stream error: $e');
-              if (!controller.isClosed) {
-                controller.add('抱歉，AI服务暂时不可用，请稍后重试。');
-                controller.close();
-              }
-            },
-            onDone: () {
-              if (!controller.isClosed) {
-                controller.close();
-              }
-            },
-          );
-
-      yield* controller.stream;
+          // 处理文本内容
+          if (delta['content'] != null) {
+            final content = _sanitizeText(delta['content'] as String);
+            if (content.isNotEmpty) {
+              accumulated += content;
+              yield accumulated;
+            }
+          }
+        } catch (e) {
+          print('解析SSE数据失败: $e');
+        }
+      }
     } catch (e, st) {
       print('❌ Dio请求失败: $e\n$st');
       yield '抱歉，无法连接AI服务，请稍后重试。';
     }
   }
 
-  Future<void> _handleToolCallsAndContinue(
+  // 修改签名，返回Stream<String>
+  Future<Stream<String>> _handleToolCallsAndContinue(
     List<Map<String, dynamic>> messages,
     Map<int, Map<String, String>> pendingToolCalls,
-    StreamController<String> controller,
     String accumulated,
   ) async {
+    final controller = StreamController<String>();
     if (!controller.isClosed) {
       controller.add(accumulated + '\n\n🔍 正在分析数据...\n\n');
     }
@@ -478,6 +455,9 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
         'tool_choice': 'none',
       };
 
+      bool hasReceivedData = false;
+      String finalResponse = '';
+
       final response = await _dio.post(
         'https://api.deepseek.com/chat/completions',
         data: requestData,
@@ -490,10 +470,7 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
         ),
       );
 
-      bool hasReceivedData = false;
-      String finalResponse = '';
-
-      _lastStreamSub = (response.data as ResponseBody).stream
+      (response.data as ResponseBody).stream
           .map((bytes) => utf8.decode(bytes))
           .transform(const LineSplitter())
           .listen(
@@ -514,19 +491,15 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
                 final choice = choices.first;
                 final delta = choice['delta'];
 
-                // print("第二次API流数据: ${choices.first}");
-
                 if (delta['content'] != null) {
                   print('第二次API流数据 delta: $delta');
                   hasReceivedData = true;
                   final content = _sanitizeText(delta['content'] as String);
                   if (content.isNotEmpty) {
-                    // print('content: $content');
                     finalResponse += content;
                     print('finalResponse: $finalResponse');
                     print('controller.isClosed: ${controller.isClosed}');
                     if (!controller.isClosed) {
-                      // 替换"正在分析数据..."为实际响应
                       final displayText = accumulated + '\n\n' + finalResponse;
                       print('controller.add(displayText): $displayText');
                       controller.add(displayText);
@@ -551,7 +524,6 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
               print('第二次API调用流结束');
               if (!controller.isClosed) {
                 if (finalResponse.isNotEmpty) {
-                  // 最终内容推送到前端
                   final displayText = accumulated + '\n\n' + finalResponse;
                   controller.add(displayText);
                 } else if (!hasReceivedData) {
@@ -571,6 +543,7 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
         controller.close();
       }
     }
+    return controller.stream;
   }
 
   /// 处理工具调用
