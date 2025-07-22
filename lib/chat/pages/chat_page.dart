@@ -19,7 +19,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final ChatDatabaseService _chatDb = ChatDatabaseService();
   final AIChatService _aiService = AIChatService();
-  
+
   List<ChatMessage> _messages = [];
   bool _isLoading = false;
   bool _isTyping = false;
@@ -38,7 +38,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     // 快速问题动画控制器
     _quickQuestionsController = AnimationController(
       duration: const Duration(milliseconds: 250),
@@ -48,10 +48,10 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       parent: _quickQuestionsController,
       curve: Curves.easeInOut,
     );
-    
+
     // 监听输入框焦点变化
     _messageController.addListener(_onInputChanged);
-    
+
     _loadChatHistory();
     _checkApiConfiguration();
   }
@@ -61,7 +61,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     setState(() {
       _hasApiKey = hasKey;
     });
-    
+
     // 如果没有配置API密钥，显示提示
     if (!hasKey && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,36 +74,37 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.settings, color: Color(0xFF8BC34A)),
-            SizedBox(width: 8),
-            Text('配置AI功能'),
-          ],
-        ),
-        content: const Text(
-          '要使用AI智能分析功能，需要先配置DeepSeek API密钥。\n\n'
-          '您可以稍后在设置中配置，或者现在就去配置。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('稍后配置'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateToSettings();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8BC34A),
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.settings, color: Color(0xFF8BC34A)),
+                SizedBox(width: 8),
+                Text('配置AI功能'),
+              ],
             ),
-            child: const Text('立即配置'),
+            content: const Text(
+              '要使用AI智能分析功能，需要先配置DeepSeek API密钥。\n\n'
+              '您可以稍后在设置中配置，或者现在就去配置。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('稍后配置'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _navigateToSettings();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8BC34A),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('立即配置'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -112,7 +113,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (context) => const DeepSeekSettingsPage()),
     );
-    
+
     // 返回后重新检查配置
     _checkApiConfiguration();
   }
@@ -192,26 +193,38 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         isUser: false,
         createdAt: DateTime.now(),
       );
-      
+
       setState(() {
         _messages.add(aiMessage);
       });
 
-      // 流式获取AI回复
-      await for (final partialResponse in _aiService.processMessageStream(content)) {
-        setState(() {
-          _messages[_messages.length - 1] = ChatMessage(
-            content: partialResponse,
-            isUser: false,
-            createdAt: aiMessage.createdAt,
-          );
-        });
-        _scrollToBottom();
+      // 累积AI回复内容
+      String aiContent = '';
+      await for (final partialResponse in _aiService.processMessageStream(
+        content,
+      )) {
+        if (partialResponse.trim().isNotEmpty) {
+          aiContent = partialResponse;
+          setState(() {
+            _messages[_messages.length - 1] = ChatMessage(
+              content: aiContent,
+              isUser: false,
+              createdAt: aiMessage.createdAt,
+            );
+          });
+          _scrollToBottom();
+        }
       }
-
+      // 流结束后，确保AI消息内容是最后一次非空内容
+      setState(() {
+        _messages[_messages.length - 1] = ChatMessage(
+          content: aiContent.isNotEmpty ? aiContent : 'AI暂无回复，请稍后重试。',
+          isUser: false,
+          createdAt: aiMessage.createdAt,
+        );
+      });
       // 保存完整的AI回复
       await _chatDb.insertMessage(_messages.last);
-
     } catch (e) {
       _showErrorSnackBar('发送消息失败: $e');
     } finally {
@@ -236,30 +249,28 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   void _showErrorSnackBar(String message) {
     print("_showErrorSnackBar===>message===>${message}");
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   Future<void> _clearChat() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('清空聊天记录'),
-        content: const Text('确定要清空所有聊天记录吗？此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('清空聊天记录'),
+            content: const Text('确定要清空所有聊天记录吗？此操作不可撤销。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('确定'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -323,10 +334,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           Expanded(
             child: Text(
               'AI功能需要配置API密钥',
-              style: TextStyle(
-                color: Colors.orange[700],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.orange[700], fontSize: 14),
             ),
           ),
           TextButton(
@@ -371,10 +379,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           const SizedBox(height: 8),
           const Text(
             '选择一个话题开始，或直接输入您的问题',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF666666),
-            ),
+            style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
           ),
           const SizedBox(height: 16),
           _buildQuickQuestionsGrid(),
@@ -409,9 +414,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: message.isUser 
-            ? MainAxisAlignment.end 
-            : MainAxisAlignment.start,
+        mainAxisAlignment:
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!message.isUser) ...[
             CircleAvatar(
@@ -425,9 +429,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: message.isUser 
-                    ? const Color(0xFF8BC34A)
-                    : Colors.white,
+                color: message.isUser ? const Color(0xFF8BC34A) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -441,7 +443,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 如果是AI消息且内容为空且正在回复，显示loading
-                  if (!message.isUser && message.content.isEmpty && _isAIResponding)
+                  if (!message.isUser &&
+                      message.content.isEmpty &&
+                      _isAIResponding)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -450,7 +454,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey[600]!,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -464,7 +470,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                       ],
                     )
                   // 如果是AI消息且有内容但仍在回复，显示内容
-                  else if (!message.isUser && message.content.isNotEmpty && _isAIResponding)
+                  else if (!message.isUser &&
+                      message.content.isNotEmpty &&
+                      _isAIResponding)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -484,7 +492,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                               height: 12,
                               child: CircularProgressIndicator(
                                 strokeWidth: 1.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[500]!),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.grey[500]!,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -511,9 +521,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                   Text(
                     _formatTime(message.createdAt),
                     style: TextStyle(
-                      color: message.isUser 
-                          ? Colors.white70 
-                          : Colors.grey[600],
+                      color: message.isUser ? Colors.white70 : Colors.grey[600],
                       fontSize: 12,
                     ),
                   ),
@@ -609,7 +617,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               );
             },
           ),
-          
+
           // 输入区域
           Padding(
             padding: const EdgeInsets.all(16),
@@ -618,22 +626,24 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               children: [
                 // 快速问题按钮
                 IconButton(
-                  onPressed: _isAIResponding ? null : _toggleQuickQuestions, // AI回复时禁用
+                  onPressed:
+                      _isAIResponding ? null : _toggleQuickQuestions, // AI回复时禁用
                   icon: AnimatedRotation(
                     turns: _showQuickQuestions ? 0.5 : 0,
                     duration: const Duration(milliseconds: 250),
                     child: const Icon(Icons.lightbulb_outline),
                   ),
-                  color: _isAIResponding 
-                      ? Colors.grey[400]
-                      : (_showQuickQuestions 
-                          ? const Color(0xFF8BC34A) 
-                          : Colors.grey[600]),
+                  color:
+                      _isAIResponding
+                          ? Colors.grey[400]
+                          : (_showQuickQuestions
+                              ? const Color(0xFF8BC34A)
+                              : Colors.grey[600]),
                   tooltip: '快速问题',
                 ),
-                
+
                 const SizedBox(width: 8),
-                
+
                 // 输入框
                 Expanded(
                   child: TextField(
@@ -646,9 +656,10 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: _isAIResponding 
-                          ? Colors.grey[100] 
-                          : const Color(0xFFF1F8E9),
+                      fillColor:
+                          _isAIResponding
+                              ? Colors.grey[100]
+                              : const Color(0xFFF1F8E9),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 12,
@@ -658,46 +669,63 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                     maxLength: 500,
                     textInputAction: TextInputAction.send,
                     onSubmitted: _isAIResponding ? null : _sendMessage,
-                    buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
-                      return currentLength > 400 
+                    buildCounter: (
+                      context, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) {
+                      return currentLength > 400
                           ? Text(
-                              '$currentLength/$maxLength',
-                              style: TextStyle(
-                                color: currentLength > 450 ? Colors.red : Colors.grey,
-                                fontSize: 12,
-                              ),
-                            )
+                            '$currentLength/$maxLength',
+                            style: TextStyle(
+                              color:
+                                  currentLength > 450
+                                      ? Colors.red
+                                      : Colors.grey,
+                              fontSize: 12,
+                            ),
+                          )
                           : null;
                     },
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 // 发送按钮
                 FloatingActionButton(
-                  onPressed: (_messageController.text.trim().isNotEmpty && !_isAIResponding)
-                      ? () => _sendMessage(_messageController.text)
-                      : null,
-                  backgroundColor: (_messageController.text.trim().isNotEmpty && !_isAIResponding)
-                      ? const Color(0xFF8BC34A)
-                      : Colors.grey[300],
+                  onPressed:
+                      (_messageController.text.trim().isNotEmpty &&
+                              !_isAIResponding)
+                          ? () => _sendMessage(_messageController.text)
+                          : null,
+                  backgroundColor:
+                      (_messageController.text.trim().isNotEmpty &&
+                              !_isAIResponding)
+                          ? const Color(0xFF8BC34A)
+                          : Colors.grey[300],
                   mini: true,
-                  child: _isAIResponding
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
+                  child:
+                      _isAIResponding
+                          ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.grey[600]!,
+                              ),
+                            ),
+                          )
+                          : Icon(
+                            Icons.send,
+                            color:
+                                (_messageController.text.trim().isNotEmpty &&
+                                        !_isAIResponding)
+                                    ? Colors.white
+                                    : Colors.grey[600],
                           ),
-                        )
-                      : Icon(
-                          Icons.send,
-                          color: (_messageController.text.trim().isNotEmpty && !_isAIResponding)
-                              ? Colors.white
-                              : Colors.grey[600],
-                        ),
                 ),
               ],
             ),
@@ -712,9 +740,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFE0E0E0), width: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,20 +766,17 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 onPressed: _toggleQuickQuestions,
                 child: const Text(
                   '收起',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8BC34A),
-                  ),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF8BC34A)),
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // 快速问题网格
           _buildQuickQuestionsGrid(),
-          
+
           const SizedBox(height: 16),
         ],
       ),
@@ -762,13 +785,14 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
   Widget _buildQuickQuestionsGrid() {
     final questions = _aiService.getPresetQuestions();
-    
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: questions.map((question) {
-        return _buildQuickQuestionChip(question);
-      }).toList(),
+      children:
+          questions.map((question) {
+            return _buildQuickQuestionChip(question);
+          }).toList(),
     );
   }
 
@@ -833,7 +857,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final messageDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
-    
+
     if (messageDate == today) {
       // 今天只显示时间
       return DateFormat('HH:mm').format(dateTime);

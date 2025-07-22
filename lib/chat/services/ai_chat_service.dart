@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
-import 'package:dart_openai/dart_openai.dart';
+import 'package:dio/dio.dart';
 import '../../services/models/ai_insights.dart';
 import '../models/chat_message.dart';
 import '../../services/analytics_service.dart';
@@ -8,12 +10,11 @@ import '../../services/models/analytics_models.dart';
 import '../../services/deepseek_config_service.dart';
 import '../../services/ai_agent_service.dart';
 import 'chat_database_service.dart';
-import 'dart:convert';
-import 'dart:math' as math;
 
 class AIChatService {
   final AnalyticsService _analyticsService = AnalyticsService();
   final AIAgentService _aiAgent = AIAgentService();
+  final Dio _dio = Dio();
   StreamSubscription? _lastStreamSub;
 
   // 系统提示词
@@ -106,15 +107,41 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
     return result.trim();
   }
 
-  /// 构建可用工具列表
-  List<OpenAIToolModel> _buildAvailableTools() {
+  /// 构建请求消息格式
+  List<Map<String, dynamic>> _buildMessages(
+    List<ChatMessage> dialog,
+    String userMessage,
+  ) {
+    final messages = <Map<String, dynamic>>[
+      {'role': 'system', 'content': _systemPrompt},
+    ];
+
+    // 添加历史对话
+    for (final msg in dialog) {
+      messages.add({
+        'role': msg.isUser ? 'user' : 'assistant',
+        'content': _sanitizeText(msg.content),
+      });
+    }
+
+    // 添加当前用户消息
+    messages.add({
+      'role': 'user',
+      'content': _sanitizeText(userMessage.trim()),
+    });
+
+    return messages;
+  }
+
+  /// 构建工具定义
+  List<Map<String, dynamic>> _buildToolsForRequest() {
     return [
-      OpenAIToolModel(
-        type: 'function',
-        function: OpenAIFunctionModel(
-          name: 'getUserRecordStats',
-          description: '获取用户记录统计数据，包括总记录数、日均记录、活跃天数等',
-          parametersSchema: {
+      {
+        'type': 'function',
+        'function': {
+          'name': 'getUserRecordStats',
+          'description': '获取用户记录统计数据，包括总记录数、日均记录、活跃天数等',
+          'parameters': {
             'type': 'object',
             'properties': {
               'period': {
@@ -125,14 +152,14 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
             },
             'required': ['period'],
           },
-        ),
-      ),
-      OpenAIToolModel(
-        type: 'function',
-        function: OpenAIFunctionModel(
-          name: 'getMoodTrendAnalysis',
-          description: '分析用户心情变化趋势和情绪状态',
-          parametersSchema: {
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'getMoodTrendAnalysis',
+          'description': '分析用户心情变化趋势和情绪状态',
+          'parameters': {
             'type': 'object',
             'properties': {
               'period': {
@@ -143,14 +170,14 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
             },
             'required': ['period'],
           },
-        ),
-      ),
-      OpenAIToolModel(
-        type: 'function',
-        function: OpenAIFunctionModel(
-          name: 'getUsageBehaviorAnalysis',
-          description: '分析用户使用行为模式和习惯',
-          parametersSchema: {
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'getUsageBehaviorAnalysis',
+          'description': '分析用户使用行为模式和习惯',
+          'parameters': {
             'type': 'object',
             'properties': {
               'period': {
@@ -161,14 +188,14 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
             },
             'required': ['period'],
           },
-        ),
-      ),
-      OpenAIToolModel(
-        type: 'function',
-        function: OpenAIFunctionModel(
-          name: 'getContentAnalysisInsights',
-          description: '分析记录内容特征和质量',
-          parametersSchema: {
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'getContentAnalysisInsights',
+          'description': '分析记录内容特征和质量',
+          'parameters': {
             'type': 'object',
             'properties': {
               'period': {
@@ -179,14 +206,14 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
             },
             'required': ['period'],
           },
-        ),
-      ),
-      OpenAIToolModel(
-        type: 'function',
-        function: OpenAIFunctionModel(
-          name: 'generateUserInsightReport',
-          description: '生成综合的用户洞察分析报告',
-          parametersSchema: {
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'generateUserInsightReport',
+          'description': '生成综合的用户洞察分析报告',
+          'parameters': {
             'type': 'object',
             'properties': {
               'period': {
@@ -197,14 +224,14 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
             },
             'required': ['period'],
           },
-        ),
-      ),
-      OpenAIToolModel(
-        type: 'function',
-        function: OpenAIFunctionModel(
-          name: 'getQuickInsightSummary',
-          description: '获取快速洞察摘要',
-          parametersSchema: {
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'getQuickInsightSummary',
+          'description': '获取快速洞察摘要',
+          'parameters': {
             'type': 'object',
             'properties': {
               'period': {
@@ -215,14 +242,12 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
             },
             'required': ['period'],
           },
-        ),
-      ),
+        },
+      },
     ];
   }
 
-
   Stream<String> processMessageStream(String userMessage) async* {
-    // Cancel any previous stream
     await _lastStreamSub?.cancel();
     _lastStreamSub = null;
 
@@ -235,148 +260,134 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
       }
 
       final chatDb = ChatDatabaseService();
-      final historyMessages = await chatDb.getRecentMessages(limit: 10);
+      final historyMessages = await chatDb.getRecentMessages(
+        limit: 8,
+      ); // 减少历史消息数量
       final dialog = <ChatMessage>[];
-      OpenAIChatMessageRole? last;
 
-      for (int i = historyMessages.length - 1; i >= 0; i--) {
-        final m = historyMessages[i];
-        final role = m.isUser ? OpenAIChatMessageRole.user : OpenAIChatMessageRole.assistant;
-        if (role == last) continue;
-        dialog.insert(0, m);
-        last = role;
-        if (dialog.length >= 10) break;
+      // 简化历史消息处理，避免重复
+      for (final m in historyMessages.reversed) {
+        dialog.add(m);
+        if (dialog.length >= 8) break;
       }
 
-      final messages = <OpenAIChatCompletionChoiceMessageModel>[
-        OpenAIChatCompletionChoiceMessageModel(
-          role: OpenAIChatMessageRole.system,
-          content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(_systemPrompt)],
-        ),
-      ];
-
-      // 添加历史对话
-      for (final msg in dialog) {
-        final role = msg.isUser ? OpenAIChatMessageRole.user : OpenAIChatMessageRole.assistant;
-        messages.add(OpenAIChatCompletionChoiceMessageModel(
-          role: role,
-          content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(_sanitizeText(msg.content))],
-        ));
-      }
-
-      final cleanUser = _sanitizeText(userMessage.trim());
-      messages.add(OpenAIChatCompletionChoiceMessageModel(
-        role: OpenAIChatMessageRole.user,
-        content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(cleanUser)],
-      ));
-
-      yield* _processWithToolCalls(messages);
+      final messages = _buildMessages(dialog, userMessage);
+      yield* _processWithDioStream(messages);
     } catch (e, st) {
       print('❌ 全局异常: $e\n$st');
       yield '抱歉，AI服务暂时不可用，请稍后重试。';
     }
   }
 
-  Stream<String> _processWithToolCalls(List<OpenAIChatCompletionChoiceMessageModel> messages) async* {
-    final stream = DeepSeekConfigService.createChatCompletionStream(
-      model: 'deepseek-chat',
-      messages: messages,
-      tools: _buildAvailableTools(),
-      toolChoice: 'auto',
-    );
+  Stream<String> _processWithDioStream(
+    List<Map<String, dynamic>> messages,
+  ) async* {
+    try {
+      final apiKey = await DeepSeekConfigService.getApiKey();
+      if (apiKey == null) {
+        yield '请先配置API密钥';
+        return;
+      }
 
-    if (stream == null) {
-      print('⚠️ Stream is null');
-      yield '抱歉，无法连接 AI 服务，请稍后重试。';
-      return;
-    }
+      final requestData = {
+        'model': 'deepseek-chat',
+        'messages': messages,
+        'stream': true,
+        'tools': _buildToolsForRequest(),
+        'tool_choice': 'auto',
+      };
 
-    print('✅ Stream 创建成功，开始监听...');
-    String accumulated = '';
-    Map<int, Map<String, String>> pendingToolCalls = {};
-    final controller = StreamController<String>();
+      final response = await _dio.post(
+        'https://api.deepseek.com/chat/completions',
+        data: requestData,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
 
-    _lastStreamSub = stream.listen(
-      (event) async {
-        print("event===>${event}");
-        final choice = event.choices.isNotEmpty ? event.choices.first : null;
-        
-        // 处理工具调用
-        if (choice?.delta.toolCalls != null && choice!.delta.toolCalls!.isNotEmpty) {
-          for (final toolCall in choice.delta.toolCalls!) {
-            if ((toolCall as OpenAIStreamResponseToolCall).index != null) {
-              final index = toolCall.index!;
-              if (!pendingToolCalls.containsKey(index)) {
-                pendingToolCalls[index] = {
-                  'id': '',
-                  'name': '',
-                  'arguments': '',
-                };
+      final controller = StreamController<String>();
+      String accumulated = '';
+      Map<int, Map<String, String>> pendingToolCalls = {};
+      bool hasToolCalls = false;
+
+      _lastStreamSub = (response.data as ResponseBody).stream
+          .map((bytes) => utf8.decode(bytes))
+          .transform(const LineSplitter())
+          .listen(
+            (line) async {
+              if (line.isEmpty || !line.startsWith('data: ')) return;
+
+              final data = line.substring(6);
+              if (data == '[DONE]') {
+                if (hasToolCalls && pendingToolCalls.isNotEmpty) {
+                  await _handleToolCallsAndContinue(
+                    messages,
+                    pendingToolCalls,
+                    controller,
+                    accumulated,
+                  );
+                } else {
+                  controller.close();
+                }
+                return;
               }
-              
-              final existing = pendingToolCalls[index]!;
-              pendingToolCalls[index] = {
-                'id': toolCall.id ?? existing['id']!,
-                'name': toolCall.function?.name ?? existing['name']!,
-                'arguments': existing['arguments']! + (toolCall.function?.arguments ?? ''),
-              };
-            }
-          }
-        }
-        
-        // 处理文本内容
-        final contents = choice?.delta.content;
-        if (contents != null) {
-          for (final c in contents) {
-            final t = _sanitizeText(c?.text ?? '');
-            if (t.isNotEmpty) {
-              accumulated += t;
-              if (!controller.isClosed) {
-                controller.add(accumulated);
-              }
-            }
-          }
-        }
-        
-        // 如果流结束且有工具调用，执行工具调用并重新请求AI
-        if (choice?.finishReason == 'tool_calls' && pendingToolCalls.isNotEmpty) {
-          if (!controller.isClosed) {
-            controller.add(accumulated + '\n\n🔍 正在分析数据...\n\n');
-          }
 
-          // 执行工具调用并添加结果消息
-          for (final toolCall in pendingToolCalls.values) {
-            final name = toolCall['name']!;
-            final arguments = toolCall['arguments']!;
-            final toolCallId = toolCall['id']!;
-            
-            if (name.isNotEmpty) {
               try {
-                final result = await _handleToolCall(name, arguments);
-                print('工具调用结果name:${name};result: $result');
+                final json = jsonDecode(data);
+                final choices = json['choices'] as List?;
+                if (choices == null || choices.isEmpty) return;
 
+                final choice = choices.first;
+                final delta = choice['delta'];
+
+                // 处理工具调用
+                if (delta['tool_calls'] != null) {
+                  hasToolCalls = true;
+                  final toolCalls = delta['tool_calls'] as List;
+                  for (final toolCall in toolCalls) {
+                    final index = toolCall['index'] as int;
+                    if (!pendingToolCalls.containsKey(index)) {
+                      pendingToolCalls[index] = {
+                        'id': '',
+                        'name': '',
+                        'arguments': '',
+                      };
+                    }
+
+                    final existing = pendingToolCalls[index]!;
+                    pendingToolCalls[index] = {
+                      'id': toolCall['id'] ?? existing['id']!,
+                      'name':
+                          toolCall['function']?['name'] ?? existing['name']!,
+                      'arguments':
+                          existing['arguments']! +
+                          (toolCall['function']?['arguments'] ?? ''),
+                    };
+                  }
+                }
+
+                // 处理文本内容
+                if (delta['content'] != null) {
+                  final content = _sanitizeText(delta['content'] as String);
+                  if (content.isNotEmpty) {
+                    accumulated += content;
+                    if (!controller.isClosed) {
+                      controller.add(accumulated);
+                    }
+                  }
+                }
               } catch (e) {
-                print('工具调用失败: $e');
-
-              }
-            }
-          }
-          
-          // 关闭当前控制器
-          if (!controller.isClosed) {
-            controller.close();
-          }
-          
-          // 重新调用AI处理工具调用结果
-          _processWithToolCalls(messages).listen(
-            (data) {
-              if (!controller.isClosed) {
-                controller.add(data);
+                print('解析SSE数据失败: $e');
               }
             },
             onError: (e) {
+              print('❌ Stream error: $e');
               if (!controller.isClosed) {
-                controller.add('处理工具调用结果时出错，请稍后重试。');
+                controller.add('抱歉，AI服务暂时不可用，请稍后重试。');
                 controller.close();
               }
             },
@@ -386,27 +397,182 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
               }
             },
           );
-          return;
-        }
-      },
-      onError: (e, st) {
-        print('❌ Stream error: $e\n$st');
-        if (!controller.isClosed) {
-          controller.add('抱歉，AI服务暂时不可用，请稍后重试。');
-          controller.close();
-        }
-      },
-      onDone: () {
-        print('🎉 Stream 完成');
-        if (!controller.isClosed) {
-          controller.close();
-        }
-      },
-      cancelOnError: true,
-    );
 
-    yield* controller.stream;
+      yield* controller.stream;
+    } catch (e, st) {
+      print('❌ Dio请求失败: $e\n$st');
+      yield '抱歉，无法连接AI服务，请稍后重试。';
+    }
   }
+
+  Future<void> _handleToolCallsAndContinue(
+    List<Map<String, dynamic>> messages,
+    Map<int, Map<String, String>> pendingToolCalls,
+    StreamController<String> controller,
+    String accumulated,
+  ) async {
+    if (!controller.isClosed) {
+      controller.add(accumulated + '\n\n🔍 正在分析数据...\n\n');
+    }
+
+    // 首先添加assistant消息（包含工具调用）
+    final toolCallsForMessage =
+        pendingToolCalls.values
+            .map(
+              (toolCall) => {
+                'id': toolCall['id'],
+                'type': 'function',
+                'function': {
+                  'name': toolCall['name'],
+                  'arguments': toolCall['arguments'],
+                },
+              },
+            )
+            .toList();
+
+    messages.add({
+      'role': 'assistant',
+      'content': accumulated.isNotEmpty ? accumulated : null,
+      'tool_calls': toolCallsForMessage,
+    });
+
+    // 执行工具调用并添加结果
+    for (final toolCall in pendingToolCalls.values) {
+      final name = toolCall['name']!;
+      final arguments = toolCall['arguments']!;
+      final toolCallId = toolCall['id']!;
+
+      if (name.isNotEmpty && toolCallId.isNotEmpty) {
+        try {
+          final result = await _handleToolCall(name, arguments);
+          print('工具调用结果name:${name};result: $result');
+
+          // 添加工具调用结果到消息历史
+          messages.add({
+            'role': 'tool',
+            'tool_call_id': toolCallId,
+            'content': result,
+          });
+        } catch (e) {
+          print('工具调用失败: $e');
+          messages.add({
+            'role': 'tool',
+            'tool_call_id': toolCallId,
+            'content': '工具调用失败，请稍后重试。',
+          });
+        }
+      }
+    }
+
+    // 重新请求AI处理工具调用结果
+    try {
+      print('开始第二次API调用处理工具结果...');
+
+      // 创建新的请求，不包含tools参数，避免再次触发工具调用
+      final apiKey = await DeepSeekConfigService.getApiKey();
+      final requestData = {
+        'model': 'deepseek-chat',
+        'messages': messages,
+        'stream': true,
+        // 不包含tools，让AI直接回复
+        'tool_choice': 'none',
+      };
+
+      final response = await _dio.post(
+        'https://api.deepseek.com/chat/completions',
+        data: requestData,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      bool hasReceivedData = false;
+      String finalResponse = '';
+
+      _lastStreamSub = (response.data as ResponseBody).stream
+          .map((bytes) => utf8.decode(bytes))
+          .transform(const LineSplitter())
+          .listen(
+            (line) {
+              if (line.isEmpty || !line.startsWith('data: ')) return;
+
+              final data = line.substring(6);
+              if (data == '[DONE]') {
+                print('第二次API调用完成，收到数据: $hasReceivedData');
+                return;
+              }
+
+              try {
+                final json = jsonDecode(data);
+                final choices = json['choices'] as List?;
+                if (choices == null || choices.isEmpty) return;
+
+                final choice = choices.first;
+                final delta = choice['delta'];
+
+                // print("第二次API流数据: ${choices.first}");
+
+                if (delta['content'] != null) {
+                  print('第二次API流数据 delta: $delta');
+                  hasReceivedData = true;
+                  final content = _sanitizeText(delta['content'] as String);
+                  if (content.isNotEmpty) {
+                    // print('content: $content');
+                    finalResponse += content;
+                    print('finalResponse: $finalResponse');
+                    print('controller.isClosed: ${controller.isClosed}');
+                    if (!controller.isClosed) {
+                      // 替换"正在分析数据..."为实际响应
+                      final displayText = accumulated + '\n\n' + finalResponse;
+                      print('controller.add(displayText): $displayText');
+                      controller.add(displayText);
+                      print(
+                        '发送数据到前端: ${content.substring(0, content.length > 50 ? 50 : content.length)}...',
+                      );
+                    }
+                  }
+                }
+              } catch (e) {
+                print('解析第二次API响应失败: $e');
+              }
+            },
+            onError: (e) {
+              print('第二次API调用流错误: $e');
+              if (!controller.isClosed) {
+                controller.add(accumulated + '\n\n处理分析结果时出错，请稍后重试。');
+                controller.close();
+              }
+            },
+            onDone: () {
+              print('第二次API调用流结束');
+              if (!controller.isClosed) {
+                if (finalResponse.isNotEmpty) {
+                  // 最终内容推送到前端
+                  final displayText = accumulated + '\n\n' + finalResponse;
+                  controller.add(displayText);
+                } else if (!hasReceivedData) {
+                  controller.add(
+                    accumulated + '\n\n根据分析结果，您的情绪状态处于一般水平，建议关注情绪变化。',
+                  );
+                }
+                controller.close();
+              }
+            },
+          );
+    } catch (e, stackTrace) {
+      print('重新请求AI失败: $e');
+      print('堆栈跟踪: $stackTrace');
+      if (!controller.isClosed) {
+        controller.add(accumulated + '\n\n处理分析结果时出错，请稍后重试。');
+        controller.close();
+      }
+    }
+  }
+
   /// 处理工具调用
   Future<String> _handleToolCall(String toolName, String arguments) async {
     try {
@@ -434,16 +600,22 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
           return '用户记录统计：总记录数${stats.totalRecords}条，日均${stats.averageDaily.toStringAsFixed(1)}条，活跃天数${stats.activeDays}/${stats.totalDays}天，心情种类${stats.moodVariety}种';
 
         case 'getMoodTrendAnalysis':
-          final analysis = await _analyticsService.getMoodTrendAnalysis(dateRange);
+          final analysis = await _analyticsService.getMoodTrendAnalysis(
+            dateRange,
+          );
           return '心情趋势分析：平均心情指数${analysis.averageMoodIndex.toStringAsFixed(1)}，心情水平${analysis.moodLevel}，情绪波动性${analysis.moodVolatility.toStringAsFixed(2)}';
 
         case 'getUsageBehaviorAnalysis':
-          final behavior = await _analyticsService.getUsageBehaviorAnalysis(dateRange);
-          return '使用行为分析：最活跃时段${behavior.mostActiveHour}点，平均使用时长${behavior}分钟，使用频率${behavior}';
+          final behavior = await _analyticsService.getUsageBehaviorAnalysis(
+            dateRange,
+          );
+          return '使用行为分析：最活跃时段${behavior.mostActiveHour}点，平均使用时长信息，使用频率信息';
 
         case 'getContentAnalysisInsights':
-          final insights = await _analyticsService.getContentAnalysisInsights(dateRange);
-          return '内容分析洞察：平均内容长度${insights.averageContentLength.toStringAsFixed(0)}字，内容质量${insights}，主要话题${insights}';
+          final insights = await _analyticsService.getContentAnalysisInsights(
+            dateRange,
+          );
+          return '内容分析洞察：平均内容长度${insights.averageContentLength.toStringAsFixed(0)}字，内容质量${insights.contentLengthLevel}，总记录数${insights.totalRecords}条';
 
         case 'generateUserInsightReport':
           final report = await _aiAgent.generateUserInsightReport(dateRange);
@@ -461,7 +633,6 @@ Voca是一款支持语音、手写和文字输入的智能速记工具，帮助�
       return '分析数据时出现错误，请稍后重试。';
     }
   }
-
 
   /// 获取预设问题列表
   List<String> getPresetQuestions() {
